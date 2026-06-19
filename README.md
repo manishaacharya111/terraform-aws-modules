@@ -51,7 +51,6 @@ After applying, the EC2 instance launched successfully into the correct public s
 
 ## Files
 
-```
 terraform-aws-modules/
 ├── modules/
 │   ├── vpc/
@@ -68,7 +67,7 @@ terraform-aws-modules/
 │   └── vpc-with-ec2/
 │       └── main.tf
 └── .gitignore
-```
+
 
 ## Commands used
 
