@@ -50,7 +50,7 @@ After applying, the EC2 instance launched successfully into the correct public s
 - Accidentally committing the `.terraform/` provider binary (648MB) breaks GitHub's 100MB file limit — fixed with `git filter-branch` to purge it from history, plus a proper `.gitignore` going forward
 
 ## Files
-
+'''
 terraform-aws-modules/
   modules/
     vpc/
@@ -67,6 +67,7 @@ terraform-aws-modules/
     vpc-with-ec2/
       main.tf
   .gitignore
+'''
 
 ## Commands used
 
