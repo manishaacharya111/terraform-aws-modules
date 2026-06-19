@@ -52,22 +52,21 @@ After applying, the EC2 instance launched successfully into the correct public s
 ## Files
 
 terraform-aws-modules/
-├── modules/
-│   ├── vpc/
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   └── ec2/
-│       ├── main.tf
-│       ├── variables.tf
-│       └── outputs.tf
-├── examples/
-│   ├── vpc-only/
-│   │   └── main.tf
-│   └── vpc-with-ec2/
-│       └── main.tf
-└── .gitignore
-
+  modules/
+    vpc/
+      main.tf
+      variables.tf
+      outputs.tf
+    ec2/
+      main.tf
+      variables.tf
+      outputs.tf
+  examples/
+    vpc-only/
+      main.tf
+    vpc-with-ec2/
+      main.tf
+  .gitignore
 
 ## Commands used
 
