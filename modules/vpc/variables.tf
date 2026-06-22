@@ -32,3 +32,9 @@ variable "environment" {
     type        = string
     default     = "dev"
 }
+
+variable "allowed_cidr_blocks" {
+    description = "A list of CIDR blocks that are allowed to access the VPC."
+    type        = list(string)
+    default     = ["10.0.0.0/8"]
+}   
