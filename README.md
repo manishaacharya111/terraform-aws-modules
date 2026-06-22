@@ -1,5 +1,5 @@
 # Terraform AWS Modules
-# Terraform AWS Modules — VPC and EC2 from scratch
+# Week3- Terraform AWS Modules — VPC and EC2 from scratch
 
 ## What was built
 
