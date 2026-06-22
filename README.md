@@ -139,3 +139,111 @@ Passed: 39, Failed: 3 (accepted), Skipped: 4 (documented)
 ### Key lesson
 
 Security tools produce false positives. The right approach is not to blindly fix everything — it's to understand each finding, assess the real risk, and document conscious decisions with ignore comments. The comment IS the documentation.
+
+## Week 4 (continued) — Terragrunt multi-environment setup
+
+### What is Terragrunt?
+
+Terragrunt is a wrapper around Terraform that eliminates repetition across multiple environments. Instead of copying the same Terraform config for dev, staging, and prod with tiny differences, Terragrunt lets you define shared config once and override only what differs per environment.
+
+### Structure built
+
+```
+terraform-aws-modules/
+  root.hcl                        # shared config: remote state, provider
+  environments/
+    dev/terragrunt.hcl            # dev-specific inputs only
+    staging/terragrunt.hcl        # staging-specific inputs only
+    prod/terragrunt.hcl           # prod-specific inputs only
+```
+
+### root.hcl — shared config once
+
+```hcl
+remote_state {
+  backend = "s3"
+  config = {
+    bucket       = "manisha-terraform-state-eu-west-1"
+    key          = "${path_relative_to_include()}/terraform.tfstate"
+    region       = "eu-west-1"
+    encrypt      = true
+    use_lockfile = true   # S3 native locking — no DynamoDB needed (requires Terraform 1.10+)
+  }
+}
+```
+
+`path_relative_to_include()` returns the relative path from root to the child config:
+- dev  → `environments/dev/terraform.tfstate`
+- staging → `environments/staging/terraform.tfstate`
+- prod → `environments/prod/terraform.tfstate`
+
+Each environment gets its own isolated state file automatically.
+
+### Environment config — only what differs
+
+```hcl
+include "root" {
+  path = find_in_parent_folders("root.hcl")
+}
+
+terraform {
+  source = "../../modules/vpc"
+}
+
+inputs = {
+  vpc_name             = "manisha-dev-vpc"
+  vpc_cidr             = "10.0.0.0/16"
+  public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+  private_subnet_cidrs = ["10.0.10.0/24", "10.0.20.0/24"]
+  availability_zones   = ["eu-west-1a", "eu-west-1b"]
+  environment          = "dev"
+}
+```
+
+### CIDR ranges — non-overlapping by design
+
+```
+dev:     10.0.0.0/16
+staging: 10.1.0.0/16
+prod:    10.2.0.0/16
+```
+
+Non-overlapping so environments can be connected via VPC peering in future without routing conflicts.
+
+### Remote state — S3 with native locking
+
+State stored in S3: `manisha-terraform-state-eu-west-1`
+Locking via S3 native conditional writes (Terraform 1.10+) — no DynamoDB required.
+
+Confirmed working — plan output showed:
+```
+Releasing state lock. This may take a few moments...
+```
+
+### Commands
+
+```bash
+# Plan a specific environment
+cd environments/dev
+terragrunt plan
+
+# Apply a specific environment
+terragrunt apply
+
+# Plan all environments at once (from repo root)
+terragrunt run-all plan
+
+# Destroy a specific environment
+terragrunt destroy
+```
+
+### Key learnings
+
+- `path_relative_to_include()` — Terragrunt function that returns path from root config to child config. Used to give each environment a unique S3 state key automatically.
+- `find_in_parent_folders("root.hcl")` — walks up directory tree to find the root config. Child configs inherit everything from it.
+- S3 native locking requires Terraform 1.10+ — older versions need DynamoDB. We upgraded from 1.5.7 to 1.15.6 specifically for this.
+- Using `terragrunt.hcl` as the root file is deprecated in Terragrunt 1.0+ — use `root.hcl` instead.
+
+### Interview answer — "how do you manage multiple environments in Terraform?"
+
+"We use Terragrunt with a root config that defines shared backend and provider settings, and per-environment configs that only contain what differs — variable values, CIDR ranges, resource names. State is stored in S3 with native locking (no DynamoDB needed since Terraform 1.10). Each environment has its own isolated state file at a path derived automatically from the directory structure. This means adding a new environment is just creating one new file with the environment-specific inputs — no copy-pasting Terraform code."
