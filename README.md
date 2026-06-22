@@ -89,3 +89,53 @@ aws ec2 describe-instances --region eu-west-1 \
 # Verifying connectivity after fix
 nc -zv -w3 <public-ip> 22
 ```
+## Week 4 — Security scanning with tfsec and checkov
+
+### Tools installed
+- `tfsec v1.28.14` — Terraform-specific security scanner
+- `checkov 3.3.1` — broader IaC security scanner
+- `terragrunt v1.0.8` — Terraform wrapper for multi-environment DRY config
+
+### Security improvements made to modules
+
+#### EC2 module (`modules/ec2`)
+- SSH ingress restricted from `0.0.0.0/0` to `var.allowed_cidr_blocks` (default `10.0.0.0/8` — VPN/private range only)
+- Added IMDSv2 enforcement via `metadata_options { http_tokens = "required" }`
+- Added EBS root volume encryption via `root_block_device { encrypted = true }`
+- Added EC2 detailed monitoring via `monitoring = true`
+- Added `allowed_cidr_blocks` variable — forces caller to make conscious SSH access decision
+
+#### VPC module (`modules/vpc`)
+- Added VPC Flow Logs → CloudWatch Log Group with 365-day retention
+- Added KMS encryption for the flow log CloudWatch Log Group
+- Added IAM role + scoped policy for flow logs (resource-specific ARN, not wildcard)
+- Added `aws_default_security_group` to restrict default VPC security group traffic
+- Added conscious ignore comments for accepted architecture decisions
+
+### tfsec result
+
+```
+Before: 3 critical, 4 high, 1 medium
+After:  0 critical, 0 high, 0 medium — No problems detected
+```
+
+### checkov result
+
+```
+Passed: 39, Failed: 3 (accepted), Skipped: 4 (documented)
+```
+
+### Consciously accepted findings
+
+| Check | Reason |
+|---|---|
+| HTTP open to internet | Web server intentionally public-facing |
+| Egress 0.0.0.0/0 | Standard practice — unrestricted outbound normal |
+| Public subnet assigns public IPs | Intentional for this architecture |
+| EBS optimization | False positive — t3 instances always EBS-optimized by default |
+| No IAM role on EC2 | Accepted for learning project |
+| KMS key no explicit policy | Default policy grants account root — acceptable |
+
+### Key lesson
+
+Security tools produce false positives. The right approach is not to blindly fix everything — it's to understand each finding, assess the real risk, and document conscious decisions with ignore comments. The comment IS the documentation.
